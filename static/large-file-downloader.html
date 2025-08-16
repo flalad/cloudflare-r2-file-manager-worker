@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大文件下载器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #2d3748;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 
+                20px 20px 60px rgba(0, 0, 0, 0.1),
+                -20px -20px 60px rgba(255, 255, 255, 0.8),
+                inset 0px 1px 0px rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            color: #2d3748;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1em;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .content {
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .file-info {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 
+                8px 8px 24px rgba(0, 0, 0, 0.08),
+                -8px -8px 24px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 2px rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .file-info h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .file-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .file-detail:last-child {
+            border-bottom: none;
+        }
+
+        .file-detail label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .file-detail span {
+            color: #2d3748;
+        }
+
+        .download-section {
+            margin-bottom: 30px;
+        }
+
+        .download-section h3 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            color: #4a5568;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 16px;
+            font-size: 1.1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            box-shadow: 
+                6px 6px 20px rgba(0, 0, 0, 0.1),
+                -6px -6px 20px rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                8px 8px 25px rgba(0, 0, 0, 0.15),
+                -8px -8px 25px rgba(255, 255, 255, 0.9);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 
+                inset 4px 4px 8px rgba(0, 0, 0, 0.1),
+                inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+        }
+
+        .btn:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 
+                inset 2px 2px 4px rgba(0, 0, 0, 0.05),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #8e9aaf 0%, #6c7893 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 
+                8px 8px 25px rgba(142, 154, 175, 0.4),
+                -8px -8px 25px rgba(255, 255, 255, 0.9);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            box-shadow: 
+                8px 8px 25px rgba(72, 187, 120, 0.4),
+                -8px -8px 25px rgba(255, 255, 255, 0.9);
+        }
+
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            box-shadow: 
+                inset 4px 4px 8px rgba(0, 0, 0, 0.05),
+                inset -4px -4px 8px rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            width: 0%;
+            box-shadow: 
+                0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #718096;
+            font-size: 0.9em;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .chunk-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            margin-top: 20px;
+            box-shadow: 
+                inset 4px 4px 8px rgba(0, 0, 0, 0.05),
+                inset -4px -4px 8px rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .chunk-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .chunk-item:last-child {
+            border-bottom: none;
+        }
+
+        .chunk-item:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.08),
+                0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .chunk-item.downloaded {
+            background: rgba(72, 187, 120, 0.2);
+            color: #2f855a;
+            box-shadow: 
+                inset 2px 2px 4px rgba(72, 187, 120, 0.1),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .chunk-item.downloading {
+            background: rgba(237, 137, 54, 0.2);
+            color: #c05621;
+            box-shadow: 
+                inset 2px 2px 4px rgba(237, 137, 54, 0.1),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .chunk-item.error {
+            background: rgba(229, 62, 62, 0.2);
+            color: #c53030;
+            box-shadow: 
+                inset 2px 2px 4px rgba(229, 62, 62, 0.1),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .chunk-info {
+            flex: 1;
+        }
+
+        .chunk-status {
+            font-size: 0.9em;
+            color: #718096;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+
+        .status-indicator.pending {
+            background: #a0aec0;
+            box-shadow: 
+                2px 2px 4px rgba(0, 0, 0, 0.1),
+                -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .status-indicator.downloading {
+            background: #ed8936;
+            box-shadow: 
+                2px 2px 4px rgba(237, 137, 54, 0.3),
+                -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .status-indicator.downloaded {
+            background: #48bb78;
+            box-shadow: 
+                2px 2px 4px rgba(72, 187, 120, 0.3),
+                -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .status-indicator.error {
+            background: #e53e3e;
+            box-shadow: 
+                2px 2px 4px rgba(229, 62, 62, 0.3),
+                -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .merge-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 
+                8px 8px 24px rgba(0, 0, 0, 0.08),
+                -8px -8px 24px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 2px rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .merge-section h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .merge-status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+
+        .merge-status.ready {
+            background: rgba(72, 187, 120, 0.2);
+            color: #2f855a;
+            border: 1px solid rgba(72, 187, 120, 0.3);
+            box-shadow: 
+                inset 2px 2px 4px rgba(72, 187, 120, 0.1),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .merge-status.processing {
+            background: rgba(237, 137, 54, 0.2);
+            color: #c05621;
+            border: 1px solid rgba(237, 137, 54, 0.3);
+            box-shadow: 
+                inset 2px 2px 4px rgba(237, 137, 54, 0.1),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .merge-status.completed {
+            background: rgba(56, 178, 172, 0.2);
+            color: #2c7a7b;
+            border: 1px solid rgba(56, 178, 172, 0.3);
+            box-shadow: 
+                inset 2px 2px 4px rgba(56, 178, 172, 0.1),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error-message {
+            background: rgba(229, 62, 62, 0.2);
+            color: #c53030;
+            border: 1px solid rgba(229, 62, 62, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 12px;
+            margin: 10px 0;
+            font-weight: 500;
+            box-shadow: 
+                inset 2px 2px 4px rgba(229, 62, 62, 0.1),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .success-message {
+            background: rgba(72, 187, 120, 0.2);
+            color: #2f855a;
+            border: 1px solid rgba(72, 187, 120, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 12px;
+            margin: 10px 0;
+            font-weight: 500;
+            box-shadow: 
+                inset 2px 2px 4px rgba(72, 187, 120, 0.1),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 大文件下载器</h1>
+            <p>分块下载大文件，避免内存限制问题</p>
+        </div>
+
+        <div class="content">
+            <div class="file-info">
+                <h3>📄 文件信息</h3>
+                <div class="file-detail">
+                    <label>文件名:</label>
+                    <span id="fileName">加载中...</span>
+                </div>
+                <div class="file-detail">
+                    <label>文件大小:</label>
+                    <span id="fileSize">加载中...</span>
+                </div>
+                <div class="file-detail">
+                    <label>分块数量:</label>
+                    <span id="chunkCount">加载中...</span>
+                </div>
+                <div class="file-detail">
+                    <label>下载方式:</label>
+                    <span>分块下载 + 本地合并</span>
+                </div>
+            </div>
+
+            <div class="download-section">
+                <h3>⬇️ 下载控制</h3>
+                <button id="startDownload" class="btn">开始下载所有分块</button>
+                <button id="pauseDownload" class="btn btn-secondary" disabled>暂停下载</button>
+                <button id="resumeDownload" class="btn btn-secondary" disabled>继续下载</button>
+                <button id="retryFailed" class="btn btn-secondary">重试失败分块</button>
+                
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <div id="progressText" class="progress-text">等待开始下载...</div>
+                </div>
+
+                <div id="errorMessage" class="error-message hidden"></div>
+                <div id="successMessage" class="success-message hidden"></div>
+            </div>
+
+            <div class="chunk-list" id="chunkList">
+                <!-- 分块列表将在这里动态生成 -->
+            </div>
+
+            <div class="merge-section">
+                <h3>🔗 文件合并</h3>
+                <div id="mergeStatus" class="merge-status ready">下载完成后将自动合并文件...</div>
+                <button id="mergeFile" class="btn btn-success" disabled>手动合并文件</button>
+                <div id="mergeProgress" class="progress-container hidden">
+                    <div class="progress-bar">
+                        <div id="mergeProgressFill" class="progress-fill"></div>
+                    </div>
+                    <div id="mergeProgressText" class="progress-text">合并进度: 0%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class LargeFileDownloader {
+            constructor() {
+                this.fileId = this.getFileIdFromURL();
+                // 使用当前页面的域名构建Worker URL
+                this.workerUrl = `${window.location.protocol}//${window.location.host}`;
+                this.metadata = null;
+                this.chunks = [];
+                this.downloadedChunks = new Map();
+                this.isDownloading = false;
+                this.isPaused = false;
+                this.downloadQueue = [];
+                this.activeDownloads = 0;
+                this.maxConcurrentDownloads = 3;
+                this.autoMergeTimeout = null; // 添加自动合并定时器
+                
+                this.init();
+            }
+
+            getFileIdFromURL() {
+                const params = new URLSearchParams(window.location.search);
+                return params.get('fileId');
+            }
+
+            async init() {
+                if (!this.fileId) {
+                    this.showError('缺少文件ID参数');
+                    return;
+                }
+
+                try {
+                    await this.loadMetadata();
+                    this.renderFileInfo();
+                    this.renderChunkList();
+                    this.bindEvents();
+                } catch (error) {
+                    this.showError('加载文件信息失败: ' + error.message);
+                }
+            }
+
+            async loadMetadata() {
+                const response = await fetch(`${this.workerUrl}/metadata/${this.fileId}.json`);
+                if (!response.ok) {
+                    throw new Error('文件元数据加载失败');
+                }
+                this.metadata = await response.json();
+                this.chunks = this.metadata.chunks;
+            }
+
+            renderFileInfo() {
+                document.getElementById('fileName').textContent = this.metadata.name;
+                document.getElementById('fileSize').textContent = this.formatFileSize(this.metadata.size);
+                document.getElementById('chunkCount').textContent = this.chunks.length;
+            }
+
+            renderChunkList() {
+                const chunkList = document.getElementById('chunkList');
+                chunkList.innerHTML = '';
+
+                this.chunks.forEach((chunk, index) => {
+                    const chunkItem = document.createElement('div');
+                    chunkItem.className = 'chunk-item';
+                    chunkItem.id = `chunk-${index}`;
+                    
+                    chunkItem.innerHTML = `
+                        <div class="chunk-info">
+                            <div>分块 ${index + 1} / ${this.chunks.length}</div>
+                            <div class="chunk-status">大小: ${this.formatFileSize(chunk.size)}</div>
+                        </div>
+                        <div class="status-indicator pending" id="status-${index}"></div>
+                    `;
+                    
+                    chunkList.appendChild(chunkItem);
+                });
+            }
+
+            bindEvents() {
+                document.getElementById('startDownload').addEventListener('click', () => this.startDownload());
+                document.getElementById('pauseDownload').addEventListener('click', () => this.pauseDownload());
+                document.getElementById('resumeDownload').addEventListener('click', () => this.resumeDownload());
+                document.getElementById('retryFailed').addEventListener('click', () => this.retryFailed());
+                document.getElementById('mergeFile').addEventListener('click', () => this.mergeFile());
+            }
+
+            startDownload() {
+                this.isDownloading = true;
+                this.isPaused = false;
+                this.downloadQueue = [...Array(this.chunks.length).keys()];
+                this.updateButtons();
+                this.processDownloadQueue();
+            }
+
+            pauseDownload() {
+                this.isPaused = true;
+                this.updateButtons();
+            }
+
+            resumeDownload() {
+                this.isPaused = false;
+                this.updateButtons();
+                this.processDownloadQueue();
+            }
+
+            retryFailed() {
+                const failedChunks = [];
+                this.chunks.forEach((chunk, index) => {
+                    if (!this.downloadedChunks.has(index)) {
+                        failedChunks.push(index);
+                    }
+                });
+                
+                if (failedChunks.length > 0) {
+                    this.downloadQueue = [...failedChunks];
+                    this.isDownloading = true;
+                    this.isPaused = false;
+                    this.updateButtons();
+                    this.processDownloadQueue();
+                }
+            }
+
+            async processDownloadQueue() {
+                while (this.downloadQueue.length > 0 && this.activeDownloads < this.maxConcurrentDownloads && !this.isPaused) {
+                    const chunkIndex = this.downloadQueue.shift();
+                    this.activeDownloads++;
+                    this.downloadChunk(chunkIndex);
+                }
+
+                if (this.activeDownloads === 0 && this.downloadQueue.length === 0) {
+                    this.onAllChunksDownloaded();
+                }
+            }
+
+            async downloadChunk(chunkIndex) {
+                const chunk = this.chunks[chunkIndex];
+                const chunkElement = document.getElementById(`chunk-${chunkIndex}`);
+                const statusElement = document.getElementById(`status-${chunkIndex}`);
+                
+                try {
+                    this.updateChunkStatus(chunkIndex, 'downloading');
+                    
+                    const response = await fetch(`${this.workerUrl}/chunks/${chunk.id}`);
+                    if (!response.ok) {
+                        throw new Error(`分块 ${chunkIndex + 1} 下载失败`);
+                    }
+
+                    const arrayBuffer = await response.arrayBuffer();
+                    this.downloadedChunks.set(chunkIndex, arrayBuffer);
+                    
+                    this.updateChunkStatus(chunkIndex, 'downloaded');
+                    this.updateProgress();
+                    
+                } catch (error) {
+                    console.error(`Chunk ${chunkIndex} download failed:`, error);
+                    this.updateChunkStatus(chunkIndex, 'error');
+                    this.showError(`分块 ${chunkIndex + 1} 下载失败: ${error.message}`);
+                } finally {
+                    this.activeDownloads--;
+                    if (!this.isPaused) {
+                        this.processDownloadQueue();
+                    }
+                }
+            }
+
+            updateChunkStatus(chunkIndex, status) {
+                const chunkElement = document.getElementById(`chunk-${chunkIndex}`);
+                const statusElement = document.getElementById(`status-${chunkIndex}`);
+                
+                chunkElement.className = `chunk-item ${status}`;
+                statusElement.className = `status-indicator ${status}`;
+            }
+
+            updateProgress() {
+                const downloaded = this.downloadedChunks.size;
+                const total = this.chunks.length;
+                const percentage = Math.round((downloaded / total) * 100);
+                
+                document.getElementById('progressFill').style.width = `${percentage}%`;
+                document.getElementById('progressText').textContent = 
+                    `下载进度: ${downloaded}/${total} (${percentage}%)`;
+            }
+
+            updateButtons() {
+                document.getElementById('startDownload').disabled = this.isDownloading;
+                document.getElementById('pauseDownload').disabled = !this.isDownloading || this.isPaused;
+                document.getElementById('resumeDownload').disabled = !this.isDownloading || !this.isPaused;
+            }
+
+            onAllChunksDownloaded() {
+                this.isDownloading = false;
+                this.updateButtons();
+                
+                document.getElementById('mergeStatus').textContent = '所有分块下载完成，3秒后自动开始合并...';
+                document.getElementById('mergeStatus').className = 'merge-status processing';
+                document.getElementById('mergeFile').disabled = false; // 允许手动合并
+                document.getElementById('mergeFile').textContent = '立即合并';
+                
+                this.showSuccess('所有分块下载完成！3秒后自动合并文件，或点击按钮立即合并');
+                
+                let countdown = 3;
+                const countdownInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        document.getElementById('mergeStatus').textContent = `所有分块下载完成，${countdown}秒后自动开始合并...`;
+                    } else {
+                        clearInterval(countdownInterval);
+                        document.getElementById('mergeStatus').textContent = '正在自动开始合并...';
+                    }
+                }, 1000);
+                
+                // 自动开始合并，延迟3秒让用户有机会手动控制
+                this.autoMergeTimeout = setTimeout(() => {
+                    this.mergeFile();
+                }, 3000);
+            }
+
+            async mergeFile() {
+                // 清除自动合并定时器
+                if (this.autoMergeTimeout) {
+                    clearTimeout(this.autoMergeTimeout);
+                    this.autoMergeTimeout = null;
+                }
+                
+                if (this.downloadedChunks.size !== this.chunks.length) {
+                    this.showError('请确保所有分块都已下载完成');
+                    return;
+                }
+
+                document.getElementById('mergeStatus').textContent = '正在合并文件...';
+                document.getElementById('mergeStatus').className = 'merge-status processing';
+                document.getElementById('mergeFile').disabled = true;
+                document.getElementById('mergeFile').textContent = '合并中...';
+                document.getElementById('mergeProgress').classList.remove('hidden');
+
+                try {
+                    const totalSize = this.metadata.size;
+                    const mergedArray = new Uint8Array(totalSize);
+                    let offset = 0;
+
+                    for (let i = 0; i < this.chunks.length; i++) {
+                        const chunkData = this.downloadedChunks.get(i);
+                        const chunkArray = new Uint8Array(chunkData);
+                        mergedArray.set(chunkArray, offset);
+                        offset += chunkArray.length;
+
+                        const progress = Math.round(((i + 1) / this.chunks.length) * 100);
+                        document.getElementById('mergeProgressFill').style.width = `${progress}%`;
+                        document.getElementById('mergeProgressText').textContent = 
+                            `合并进度: ${progress}%`;
+
+                        // 让UI有机会更新
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+
+                    // 创建下载链接
+                    const blob = new Blob([mergedArray], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = this.metadata.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    document.getElementById('mergeStatus').textContent = '✅ 文件已自动合并并下载完成！';
+                    document.getElementById('mergeStatus').className = 'merge-status completed';
+                    this.showSuccess(`🎉 文件 "${this.metadata.name}" 已自动下载到您的设备！`);
+
+                } catch (error) {
+                    this.showError('文件合并失败: ' + error.message);
+                    document.getElementById('mergeFile').disabled = false;
+                }
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            showError(message) {
+                const errorElement = document.getElementById('errorMessage');
+                errorElement.textContent = message;
+                errorElement.classList.remove('hidden');
+                setTimeout(() => {
+                    errorElement.classList.add('hidden');
+                }, 5000);
+            }
+
+            showSuccess(message) {
+                const successElement = document.getElementById('successMessage');
+                successElement.textContent = message;
+                successElement.classList.remove('hidden');
+                setTimeout(() => {
+                    successElement.classList.add('hidden');
+                }, 5000);
+            }
+        }
+
+        // 初始化下载器
+        document.addEventListener('DOMContentLoaded', () => {
+            new LargeFileDownloader();
+        });
+    </script>
+</body>
+</html>
